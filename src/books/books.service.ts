@@ -1,35 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { Book } from '../entityes/boook.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Book, BookDocument } from '../schemas/book.schema';
+import { CreateBookDto } from '../entityes/dto/create-book.dto';
+import { UpdateBookDto } from '../entityes/dto/update-book.dto';
 
 @Injectable()
 export class BooksService {
-  private books: Book[] = []; 
+  constructor(
+    @InjectModel(Book.name) private bookModel: Model<BookDocument>,
+  ) {}
 
-  findAll(): Book[] {
-    return this.books;
+  async findAll(): Promise<Book[]> {
+    return this.bookModel.find().exec(); 
   }
 
-  findOne(id: number): Book | undefined {
-    return this.books.find((book) => book.id === id);
+  async findOne(id: string): Promise<Book | null> {
+    return this.bookModel.findById(id).exec(); 
   }
 
-  create(bookData: Omit<Book, 'id'>): Book {
-    const maxId = Math.max(...this.books.map(b => b.id), 0);
-    const newBook: Book = { id: maxId + 1, ...bookData };
-    this.books.push(newBook);
-    return newBook;
+  async create(createBookDto: CreateBookDto): Promise<Book> {
+    const createdBook = new this.bookModel(createBookDto); 
+    return createdBook.save(); 
   }
 
-  update(id: number, changes: Partial<Book>): Book | undefined {
-    const index = this.books.findIndex((book) => book.id === id);
-    if (index > -1) {
-      Object.assign(this.books[index], changes);
-      return this.books[index];
-    }
-    return undefined;
+  async update(id: string, updateBookDto: UpdateBookDto): Promise<Book | null> {
+    return this.bookModel.findByIdAndUpdate(id, updateBookDto, { new: true }).exec(); 
   }
 
-  remove(id: number): void {
-    this.books = this.books.filter((book) => book.id !== id);
+  async remove(id: string): Promise<void> {
+    await this.bookModel.deleteOne({ _id: id }).exec(); 
   }
 }
